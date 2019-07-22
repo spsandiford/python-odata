@@ -108,6 +108,10 @@ class Query(object):
         if _offset is not None:
             options['$skip'] = _offset
 
+        _search = self.options.get('$search')
+        if _search:
+            options['$search'] = _search
+
         _select = self.options.get('$select')
         if _select:
             options['$select'] = ','.join(_select)
@@ -152,6 +156,7 @@ class Query(object):
         o = dict()
         o['$top'] = self.options.get('$top', None)
         o['$skip'] = self.options.get('$skip', None)
+        o['$search'] = self.options.get('$search', None)
         o['$select'] = self.options.get('$select', [])[:]
         o['$filter'] = self.options.get('$filter', [])[:]
         o['$expand'] = self.options.get('$expand', [])[:]
@@ -234,6 +239,17 @@ class Query(object):
         """
         q = self._new_query()
         q.options['$skip'] = value
+        return q
+
+    def search(self, value):
+        """
+        Set query option ``$search``.
+
+        :param value: Search Term. For example, ``red`` or ``"mountain bike"``
+        :return: Query instance
+        """
+        q = self._new_query()
+        q.options['$search'] = value
         return q
 
     @staticmethod
