@@ -74,14 +74,16 @@ class ODataService(object):
     :param reflect_entities: Create a request to the service for its metadata, and create entity classes automatically
     :param session: Custom Requests session to use for communication with the endpoint
     :param auth: Custom Requests auth object to use for credentials
+    :param namespaced_enums: Whether to name enum types with the full namespaced value
     :raises ODataConnectionError: Fetching metadata failed. Server returned an HTTP error code
     """
-    def __init__(self, url, base=None, reflect_entities=False, session=None, auth=None):
+    def __init__(self, url, base=None, reflect_entities=False, session=None, auth=None, namespaced_enums = False):
         self.url = url
         self.metadata_url = ''
         self.collections = {}
         self.log = logging.getLogger('odata.service')
         self.default_context = Context(auth=auth, session=session)
+        self.namespaced_enums = namespaced_enums
 
         self.entities = {}
         """
@@ -115,7 +117,7 @@ class ODataService(object):
         :type types: dict
         """
 
-        self.metadata = MetaData(self)
+        self.metadata = MetaData(self, self.namespaced_enums)
         self.Base = base or declarative_base()
         """
         Entity base class. Either a custom one given in init or a generated one. Can be used to define entities
@@ -170,14 +172,14 @@ class ODataService(object):
         """Returns boolean indicating entity's status"""
         return self.default_context.is_entity_saved(entity)
 
-    def query(self, entitycls):
+    def query(self, entitycls, encode_params=True):
         """
         Start a new query for given entity class
 
         :param entitycls: Entity to query
         :return: Query object
         """
-        return self.default_context.query(entitycls)
+        return self.default_context.query(entitycls, encode_params)
 
     def delete(self, entity):
         """

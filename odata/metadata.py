@@ -40,10 +40,11 @@ class MetaData(object):
 
     _annotation_term_computed = 'Org.OData.Core.V1.Computed'
 
-    def __init__(self, service):
+    def __init__(self, service, namespaced_enums=False):
         self.url = service.url + '$metadata'
         self.connection = service.default_context.connection
         self.service = service
+        self.namespaced_enums = namespaced_enums
 
     def property_type_to_python(self, edm_type):
         return self.property_types.get(edm_type, StringProperty)
@@ -125,7 +126,11 @@ class MetaData(object):
                     property_type = all_types.get(prop['type'])
 
                     if property_type and issubclass(property_type, EnumType):
-                        property_instance = EnumTypeProperty(prop_name, enum_class=property_type)
+                        if self.namespaced_enums:
+                            property_instance = EnumTypeProperty(prop_name, enum_class=property_type,
+                                                                 namespace=schema['name'])
+                        else:
+                            property_instance = EnumTypeProperty(prop_name, enum_class=property_type)
                         property_instance.is_computed_value = prop['is_computed_value']
                     else:
                         type_ = self.property_type_to_python(prop['type'])
@@ -227,10 +232,16 @@ class MetaData(object):
             return self.property_type_to_python(typename)
 
         for schema in schemas:
+            schema_alias = None
+            if 'alias' in schema.keys():
+                schema_alias = schema['alias']
             for enum_type in schema['enum_types']:
                 names = [(i['name'], i['value']) for i in enum_type['members']]
                 created_enum = EnumType(enum_type['name'], names=names)
                 all_types[enum_type['fully_qualified_name']] = created_enum
+                if schema_alias:
+                    enum_name_alias = '.'.join([schema_alias, enum_type['name']])
+                    all_types[enum_name_alias] = created_enum
 
         self._create_entities(all_types, base_class, schemas)
 

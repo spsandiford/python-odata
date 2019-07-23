@@ -58,16 +58,20 @@ class Query(object):
     This class should not be instantiated directly, but from a
     :py:class:`~odata.service.ODataService` object.
     """
-    def __init__(self, entitycls, connection=None, options=None):
+    def __init__(self, entitycls, connection=None, options=None, encode_params=True):
         self.entity = entitycls
         self.options = options or dict()
         self.connection = connection
+        self._encode_params = encode_params
 
     def __iter__(self):
         url = self._get_url()
         options = self._get_options()
         while True:
-            data = self.connection.execute_get(url, options)
+            if self._encode_params:
+                data = self.connection.execute_get(url, options)
+            else:
+                data = self.connection.execute_get(self.as_string(), {})
             if 'value' in data:
                 value = data.get('value', [])
                 for row in value:
@@ -161,7 +165,7 @@ class Query(object):
         o['$filter'] = self.options.get('$filter', [])[:]
         o['$expand'] = self.options.get('$expand', [])[:]
         o['$orderby'] = self.options.get('$orderby', [])[:]
-        return Query(self.entity, options=o, connection=self.connection)
+        return Query(self.entity, options=o, connection=self.connection, encode_params=self._encode_params)
 
     def as_string(self):
         query = self._format_params(self._get_options())
